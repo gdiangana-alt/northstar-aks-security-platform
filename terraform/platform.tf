@@ -106,10 +106,9 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 }
 
 resource "azurerm_federated_identity_credential" "workload" {
-  name                = "workloads-secret-reader"
-  resource_group_name = azurerm_resource_group.platform.name
-  parent_id           = azurerm_user_assigned_identity.workload.id
-  audience            = ["api://AzureADTokenExchange"]
-  issuer              = azurerm_kubernetes_cluster.platform.oidc_issuer_url
-  subject             = "system:serviceaccount:workloads:secret-reader"
+  name      = "workloads-secret-reader"
+  parent_id = azurerm_user_assigned_identity.workload.id
+  audience  = ["api://AzureADTokenExchange"]
+  issuer    = azurerm_kubernetes_cluster.platform.oidc_issuer_url
+  subject   = "system:serviceaccount:workloads:secret-reader"
 }
