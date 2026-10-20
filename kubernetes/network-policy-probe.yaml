@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: probe-dns-only
+  namespace: workloads
+spec:
+  podSelector:
+    matchLabels:
+      app: cilium-egress-probe
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cilium-egress-probe
+  namespace: workloads
+  labels:
+    app: cilium-egress-probe
+spec:
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+      effect: NoSchedule
+  containers:
+    - name: probe
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep 3600"]

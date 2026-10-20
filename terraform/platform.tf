@@ -29,7 +29,7 @@ resource "azurerm_key_vault" "platform" {
   network_acls {
     bypass         = "None"
     default_action = "Deny"
-    ip_rules       = ["128.24.198.36/32", "20.175.221.129/32"]
+    ip_rules       = ["9.234.210.170/32", "20.175.221.129/32"]
   }
 
 
@@ -65,7 +65,7 @@ resource "azurerm_kubernetes_cluster" "platform" {
   sku_tier            = "Free"
 
   api_server_access_profile {
-    authorized_ip_ranges = ["128.24.198.36/32"]
+    authorized_ip_ranges = ["9.234.210.170/32"]
   }
 
   local_account_disabled    = true
@@ -128,4 +128,18 @@ resource "azurerm_federated_identity_credential" "workload" {
   audience                  = ["api://AzureADTokenExchange"]
   issuer                    = azurerm_kubernetes_cluster.platform.oidc_issuer_url
   subject                   = "system:serviceaccount:workloads:secret-reader"
+}
+
+resource "azurerm_resource_group_policy_assignment" "deny_privileged_containers" {
+  name                 = "northstar-deny-privileged"
+  display_name         = "Deny privileged containers in workloads namespace"
+  resource_group_id    = azurerm_resource_group.platform.id
+  policy_definition_id = "/providers/Microsoft.Authorization/policyDefinitions/95edb821-ddaf-4404-9732-666045e056b4"
+
+  parameters = jsonencode({
+    effect     = { value = "Deny" }
+    namespaces = { value = ["workloads"] }
+  })
+
+  depends_on = [azurerm_kubernetes_cluster.platform]
 }
