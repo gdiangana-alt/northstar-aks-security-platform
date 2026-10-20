@@ -7,5 +7,5 @@ variable "aks_name" {
 variable "system_node_vm_size" {
   description = "Small validation node size for the AKS system pool."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_D2ps_v6"
 }
