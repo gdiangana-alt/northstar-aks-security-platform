@@ -26,6 +26,13 @@ resource "azurerm_key_vault" "platform" {
   rbac_authorization_enabled = true
   purge_protection_enabled   = false
   soft_delete_retention_days = 7
+  network_acls {
+    bypass         = "None"
+    default_action = "Deny"
+    ip_rules       = ["128.24.198.36/32", "20.175.221.129/32"]
+  }
+
+
 
   tags = azurerm_resource_group.platform.tags
 }
@@ -57,6 +64,10 @@ resource "azurerm_kubernetes_cluster" "platform" {
   dns_prefix          = "northstaraks-${local.unique_suffix}"
   sku_tier            = "Free"
 
+  api_server_access_profile {
+    authorized_ip_ranges = ["128.24.198.36/32"]
+  }
+
   local_account_disabled    = true
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
@@ -70,6 +81,11 @@ resource "azurerm_kubernetes_cluster" "platform" {
     max_count                    = 1
     os_disk_size_gb              = 30
     only_critical_addons_enabled = true
+    upgrade_settings {
+      drain_timeout_in_minutes      = 0
+      max_surge                     = "10%"
+      node_soak_duration_in_minutes = 0
+    }
 
     node_labels = {
       "northstar.io/purpose" = "system"
@@ -92,6 +108,7 @@ resource "azurerm_kubernetes_cluster" "platform" {
   network_profile {
     network_plugin      = "azure"
     network_plugin_mode = "overlay"
+    network_data_plane  = "cilium"
     network_policy      = "cilium"
     load_balancer_sku   = "standard"
   }
@@ -106,9 +123,9 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 }
 
 resource "azurerm_federated_identity_credential" "workload" {
-  name      = "workloads-secret-reader"
-  parent_id = azurerm_user_assigned_identity.workload.id
-  audience  = ["api://AzureADTokenExchange"]
-  issuer    = azurerm_kubernetes_cluster.platform.oidc_issuer_url
-  subject   = "system:serviceaccount:workloads:secret-reader"
+  name                      = "workloads-secret-reader"
+  user_assigned_identity_id = azurerm_user_assigned_identity.workload.id
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = azurerm_kubernetes_cluster.platform.oidc_issuer_url
+  subject                   = "system:serviceaccount:workloads:secret-reader"
 }
